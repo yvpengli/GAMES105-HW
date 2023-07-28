@@ -48,10 +48,10 @@ def part1_inverse_kinematics(meta_data, joint_positions, joint_orientations, tar
 
     path, path_name, path1, path2 = meta_data.get_path_from_root_to_end()
 
-    # print(path)
-    # print(path_name)
-    # print(path1)
-    # print(path2)
+    print(path)
+    print(path_name)
+    print(path1)
+    print(path2)
 
     joint_rotations = get_joint_rotations()
     joint_offsets = get_joint_offsets()

@@ -4,6 +4,8 @@ from bvh_loader import BVHMotion
 from physics_warpper import PhysicsInfo
 
 
+
+
 def part1_cal_torque(pose, physics_info: PhysicsInfo, **kargs):
     '''
     输入： pose： (20,4)的numpy数组，表示每个关节的目标旋转(相对于父关节的)
@@ -12,15 +14,40 @@ def part1_cal_torque(pose, physics_info: PhysicsInfo, **kargs):
     输出： global_torque: (20,3)的numpy数组，表示每个关节的全局坐标下的目标力矩，根节点力矩会被后续代码无视
     '''
     # ------一些提示代码，你可以随意修改------------#
-    kp = kargs.get('kp', 500) # 需要自行调整kp和kd！ 而且也可以是一个数组，指定每个关节的kp和kd
-    kd = kargs.get('kd', 20) 
+    # kp的默认值是500, kd的默认值是20
+    kp = kargs.get('kp', 300) # 需要自行调整kp和kd！ 而且也可以是一个数组，指定每个关节的kp和kd
+    kd = kargs.get('kd', 20)
+
     parent_index = physics_info.parent_index
     joint_name = physics_info.joint_name
     joint_orientation = physics_info.get_joint_orientation()
     joint_avel = physics_info.get_body_angular_velocity()
 
+    print('...show datas...')
+    print(len(joint_orientation), type(joint_orientation))
+    print(joint_name)
+    print(parent_index)
+    print(joint_avel.shape)
+
+    # ?? 这个父节点的逆旋转放在前面还是后面有关系吗
+    # 先获取每个关节的局部旋转
+    joint_rotations = np.empty(joint_orientation.shape)
+    joint_rotations[0] = R.from_quat(joint_orientation[0]).as_quat()
+    for i in range(1, len(joint_orientation)):
+        joint_rotations[i] = (R.from_quat(joint_orientation[i]) * R.from_quat(joint_orientation[parent_index[i]]).inv()).as_quat()
+
+    # 用目标旋转(局部坐标下)减去局部旋转
+    delta_rotation = np.empty(joint_avel.shape)
+    for i in range(len(delta_rotation)):
+        delta_rotation[i] = (R.from_quat(pose[i]) * R.from_quat(joint_rotations[i]).inv()).as_euler('XYZ', degrees=True)
+
+    local_torque = kp * delta_rotation - kd * joint_avel
+
+    # 不知道为什么要弄一个local_torque
     global_torque = np.zeros((20,3))
-    
+    for i in range(1, len(global_torque)):
+        global_torque[i] = local_torque[i]
+
     return global_torque
 
 def part2_cal_float_base_torque(target_position, pose, physics_info, **kargs):
